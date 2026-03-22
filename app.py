@@ -20,25 +20,30 @@ if uploaded_file:
         col2 = st.selectbox("Select Feature 2", numeric_cols)
         k = st.slider("Number of clusters (K)", 2, 6, 3)
 
-        clean_df = df[[col1, col2]].dropna()
+        # Clean data
+        clean_df = df[[col1, col2]].dropna().reset_index(drop=True)
 
+        # K-Means
         kmeans = KMeans(n_clusters=k, random_state=42)
         clean_df["Cluster"] = kmeans.fit_predict(clean_df)
 
         st.subheader("📊 K-Means (Mean-based) Clustering")
 
         fig, ax = plt.subplots()
+
         scatter = ax.scatter(
-            clean_df[col1],
-            clean_df[col2],
-            c=clean_df["Cluster"]
+            clean_df[col1].to_numpy(),
+            clean_df[col2].to_numpy(),
+            c=clean_df["Cluster"].to_numpy(),
+            cmap="viridis"
         )
 
         ax.scatter(
             kmeans.cluster_centers_[:, 0],
             kmeans.cluster_centers_[:, 1],
             s=200,
-            marker="X"
+            marker="X",
+            color="red"
         )
 
         ax.set_xlabel(col1)
@@ -47,6 +52,7 @@ if uploaded_file:
         plt.colorbar(scatter)
         st.pyplot(fig)
 
+        # Download
         st.subheader("📤 Download Output")
         st.download_button(
             "⬇️ Download Clustered CSV",
@@ -54,7 +60,8 @@ if uploaded_file:
             file_name="crime_clustered_output.csv",
             mime="text/csv"
         )
+
     else:
-        st.warning("Need at least 2 numeric columns")
+        st.warning("Dataset must have at least 2 numeric columns")
 else:
-    st.info("Upload CSV to begin analysis")
+    st.info("Upload CSV to start analysis")
