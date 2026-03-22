@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+import numpy as np
 
 st.set_page_config(page_title="Crime Data Analysis", layout="wide")
 st.title("🚔 Crime Data Analysis using K-Means Clustering")
@@ -10,58 +11,76 @@ uploaded_file = st.file_uploader("📥 Upload crime_output.csv", type=["csv"])
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.subheader("📄 Dataset")
+    st.subheader("📄 Dataset Preview")
     st.dataframe(df)
 
-    numeric_cols = df.select_dtypes(include=["int64", "float64"]).columns
+    # Force numeric columns
+    numeric_cols = df.columns
 
-    if len(numeric_cols) >= 2:
-        col1 = st.selectbox("Select Feature 1", numeric_cols)
-        col2 = st.selectbox("Select Feature 2", numeric_cols)
-        k = st.slider("Number of clusters (K)", 2, 6, 3)
+    col1 = st.selectbox("Select Feature 1", numeric_cols)
+    col2 = st.selectbox("Select Feature 2", numeric_cols)
 
-        # Clean data
-        clean_df = df[[col1, col2]].dropna().reset_index(drop=True)
+    if col1 == col2:
+        st.error("❌ Please select two DIFFERENT features")
+        st.stop()
 
-        # K-Means
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        clean_df["Cluster"] = kmeans.fit_predict(clean_df)
+    # Convert to numeric safely
+    x = pd.to_numeric(df[col1], errors="coerce")
+    y = pd.to_numeric(df[col2], errors="coerce")
 
-        st.subheader("📊 K-Means (Mean-based) Clustering")
+    clean_df = pd.DataFrame({
+        col1: x,
+        col2: y
+    }).dropna()
 
-        fig, ax = plt.subplots()
+    if clean_df.empty or len(clean_df) < 2:
+        st.error("❌ Not enough valid numeric data for clustering")
+        st.stop()
 
-        scatter = ax.scatter(
-            clean_df[col1].to_numpy(),
-            clean_df[col2].to_numpy(),
-            c=clean_df["Cluster"].to_numpy(),
-            cmap="viridis"
-        )
+    k = st.slider("Number of clusters (K)", 2, 6, 3)
 
-        ax.scatter(
-            kmeans.cluster_centers_[:, 0],
-            kmeans.cluster_centers_[:, 1],
-            s=200,
-            marker="X",
-            color="red"
-        )
+    # KMeans
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    clusters = kmeans.fit_predict(clean_df)
 
-        ax.set_xlabel(col1)
-        ax.set_ylabel(col2)
-        ax.set_title("K-Means Clustering")
-        plt.colorbar(scatter)
-        st.pyplot(fig)
+    st.subheader("📊 K-Means (Mean-based) Clustering")
 
-        # Download
-        st.subheader("📤 Download Output")
-        st.download_button(
-            "⬇️ Download Clustered CSV",
-            clean_df.to_csv(index=False),
-            file_name="crime_clustered_output.csv",
-            mime="text/csv"
-        )
+    fig, ax = plt.subplots()
 
-    else:
-        st.warning("Dataset must have at least 2 numeric columns")
+    scatter = ax.scatter(
+        clean_df[col1].values.ravel(),
+        clean_df[col2].values.ravel(),
+        c=clusters,
+        cmap="viridis"
+    )
+
+    ax.scatter(
+        kmeans.cluster_centers_[:, 0],
+        kmeans.cluster_centers_[:, 1],
+        s=200,
+        c="red",
+        marker="X",
+        label="Centroids"
+    )
+
+    ax.set_xlabel(col1)
+    ax.set_ylabel(col2)
+    ax.set_title("K-Means Clustering")
+    ax.legend()
+    plt.colorbar(scatter)
+    st.pyplot(fig)
+
+    # Output
+    output_df = clean_df.copy()
+    output_df["Cluster"] = clusters
+
+    st.subheader("📤 Download Output")
+    st.download_button(
+        "⬇️ Download Clustered CSV",
+        output_df.to_csv(index=False),
+        file_name="crime_clustered_output.csv",
+        mime="text/csv"
+    )
+
 else:
     st.info("Upload CSV to start analysis")
