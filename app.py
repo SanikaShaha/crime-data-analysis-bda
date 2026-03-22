@@ -7,7 +7,8 @@ st.set_page_config(page_title="Crime Data Analysis", layout="wide")
 
 st.title("🚔 Crime Data Analysis using K-Means Clustering")
 
-uploaded_file = st.file_uploader("Upload crime_output.csv", type=["csv"])
+# Upload CSV (Spark output OR any crime CSV)
+uploaded_file = st.file_uploader("📥 Upload crime_output.csv", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
@@ -15,8 +16,8 @@ if uploaded_file is not None:
     st.subheader("📄 Crime Dataset")
     st.dataframe(df)
 
-    # Select numeric columns
-    numeric_cols = df.select_dtypes(include=['int64','float64']).columns
+    # Numeric columns only
+    numeric_cols = df.select_dtypes(include=["int64", "float64"]).columns
 
     if len(numeric_cols) >= 2:
         col1 = st.selectbox("Select Feature 1", numeric_cols)
@@ -38,19 +39,26 @@ if uploaded_file is not None:
             c=df["Cluster"]
         )
         ax.scatter(
-            kmeans.cluster_centers_[:,0],
-            kmeans.cluster_centers_[:,1],
+            kmeans.cluster_centers_[:, 0],
+            kmeans.cluster_centers_[:, 1],
             s=200,
-            marker='X'
+            marker="X"
         )
         ax.set_xlabel(col1)
         ax.set_ylabel(col2)
-        ax.set_title("K-Means (Mean-based) Clustering")
+        ax.set_title("Mean-based (K-Means) Clustering")
         plt.colorbar(scatter)
         st.pyplot(fig)
 
+        # Download output
+        st.subheader("📤 Download Clustered Output")
+        st.download_button(
+            "⬇️ Download CSV",
+            df.to_csv(index=False),
+            file_name="crime_clustered_output.csv",
+            mime="text/csv"
+        )
     else:
         st.warning("Dataset must contain at least 2 numeric columns")
-
 else:
-    st.info("⬆️ Upload crime_output.csv to perform K-Means clustering")
+    st.info("⬆️ Upload crime_output.csv to start analysis")
