@@ -1,0 +1,11 @@
+# Ignore everything by default
+*
+
+# Allow only these files
+!app.py
+!requirements.txt
+!README.md
+!.gitignore
+
+
+
